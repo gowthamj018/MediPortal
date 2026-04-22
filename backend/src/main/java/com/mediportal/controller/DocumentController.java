@@ -6,6 +6,7 @@ import com.mediportal.model.Patient;
 import com.mediportal.repository.AppointmentRepository;
 import com.mediportal.repository.DocumentRepository;
 import com.mediportal.repository.PatientRepository;
+import com.mediportal.repository.DoctorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -32,6 +33,9 @@ public class DocumentController {
 
     @Autowired
     private DocumentRepository documentRepository;
+
+    @Autowired
+    private DoctorRepository doctorRepository;
 
     @Autowired
     private AppointmentRepository appointmentRepository;
@@ -110,10 +114,16 @@ public class DocumentController {
 
     @GetMapping("/download/{id}")
     public ResponseEntity<Resource> downloadDocument(@PathVariable Long id, Authentication auth) throws MalformedURLException {
-        Patient patient = getCurrentPatient(auth);
+        String email = auth.getName();
         Document doc = documentRepository.findById(id).orElseThrow();
 
-        if (!doc.getPatient().getId().equals(patient.getId())) {
+        boolean isPatient = patientRepository.findByEmail(email)
+                .map(p -> p.getId().equals(doc.getPatient().getId()))
+                .orElse(false);
+
+        boolean isDoctor = doctorRepository.findByEmail(email).isPresent();
+
+        if (!isPatient && !isDoctor) {
             return ResponseEntity.status(403).build();
         }
 

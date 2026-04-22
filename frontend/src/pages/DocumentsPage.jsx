@@ -43,7 +43,7 @@ function PrescriptionCard({ doc }) {
   );
 }
 
-function FileCard({ doc, onDelete }) {
+function FileCard({ doc, onDelete, onDownload }) {
   const cfg = TYPE_CONFIG[doc.documentType] || TYPE_CONFIG.OTHER;
   return (
     <div className="card doc-card">
@@ -66,10 +66,10 @@ function FileCard({ doc, onDelete }) {
         {doc.description && <div className="doc-description">{doc.description}</div>}
       </div>
       <div className="doc-actions">
-        <a href={`${api.defaults.baseURL || ''}/api/documents/download/${doc.id}`}
-          className="icon-btn" title="Download" target="_blank" rel="noopener noreferrer">
+        <button onClick={() => onDownload(doc.id, doc.originalName || doc.fileName)}
+          className="icon-btn" title="Download">
           <Download size={15} />
-        </a>
+        </button>
         <button className="icon-btn danger" title="Delete" onClick={() => onDelete(doc.id)}>
           <Trash2 size={15} />
         </button>
@@ -103,6 +103,25 @@ export default function DocumentsPage() {
     } catch { toast.error('Failed to delete.'); }
   };
 
+  const handleDownload = async (id, fileName) => {
+    try {
+      const response = await api.get(`/api/documents/download/${id}`, {
+        responseType: 'blob',
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName || 'document');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Failed to download document.');
+    }
+  };
+
   const tabs = [
     ['all', 'All'],
     ['PRESCRIPTION', 'Prescriptions'],
@@ -132,7 +151,7 @@ export default function DocumentsPage() {
 
       {loading ? (
         <div className="loading-placeholder">
-          {[1,2,3].map(i => <div key={i} className="skeleton-card" />)}
+          {[1, 2, 3].map(i => <div key={i} className="skeleton-card" />)}
         </div>
       ) : filtered.length === 0 ? (
         <div className="empty-state">
@@ -146,7 +165,7 @@ export default function DocumentsPage() {
             doc.documentType === 'PRESCRIPTION' && doc.prescriptionText ? (
               <PrescriptionCard key={doc.id} doc={doc} />
             ) : (
-              <FileCard key={doc.id} doc={doc} onDelete={handleDelete} />
+              <FileCard key={doc.id} doc={doc} onDelete={handleDelete} onDownload={handleDownload} />
             )
           ))}
         </div>
