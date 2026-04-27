@@ -20,6 +20,7 @@ public class DoctorResponse {
     private String availableDays;
     private String availableFrom;
     private String availableTo;
+    private String availableTimeSlots;
     private Double rating;       // null if no ratings yet
     private Long ratingCount;    // number of ratings
     private Double consultationFee;
@@ -45,6 +46,7 @@ public class DoctorResponse {
         dto.setAvailableDays(d.getAvailableDays());
         dto.setAvailableFrom(d.getAvailableFrom());
         dto.setAvailableTo(d.getAvailableTo());
+        dto.setAvailableTimeSlots(d.getAvailableTimeSlots());
         dto.setConsultationFee(d.getConsultationFee());
         // Rating is null if no one has rated yet
         if (ratingCount > 0 && avgRating != null) {

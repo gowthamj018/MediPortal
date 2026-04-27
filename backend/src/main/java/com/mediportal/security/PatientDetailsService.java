@@ -25,28 +25,29 @@ public class PatientDetailsService implements UserDetailsService {
 
     @Override
     @Transactional
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String phone) throws UsernameNotFoundException {
         // Try patient first
-        Optional<Patient> patient = patientRepository.findByEmail(email);
+        Optional<Patient> patient = patientRepository.findByPhone(phone);
         if (patient.isPresent()) {
             return User.builder()
-                    .username(patient.get().getEmail())
-                    .password(patient.get().getPassword())
+                    .username(patient.get().getPhone())
+                    .password("") // Password is no longer used
+
                     .authorities("ROLE_PATIENT")
                     .build();
         }
 
         // Try doctor
-        Optional<Doctor> doctor = doctorRepository.findByEmail(email);
+        Optional<Doctor> doctor = doctorRepository.findByPhone(phone);
         if (doctor.isPresent()) {
             return User.builder()
-                    .username(doctor.get().getEmail())
-                    .password(doctor.get().getPassword())
+                    .username(doctor.get().getPhone())
+                    .password("") // Password is no longer used
                     .authorities("ROLE_DOCTOR")
                     .build();
         }
 
-        throw new UsernameNotFoundException("User not found with email: " + email);
+        throw new UsernameNotFoundException("User not found with phone: " + phone);
     }
 }
 

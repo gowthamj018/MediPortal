@@ -6,7 +6,6 @@ import Sidebar from './components/Sidebar';
 import DoctorSidebar from './components/DoctorSidebar';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import DoctorRegisterPage from './pages/DoctorRegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import BookAppointmentPage from './pages/BookAppointmentPage';
@@ -17,6 +16,7 @@ import DoctorDashboardPage from './pages/DoctorDashboardPage';
 import DoctorAppointmentsPage from './pages/DoctorAppointmentsPage';
 import DoctorPrescriptionPage from './pages/DoctorPrescriptionPage';
 import DoctorUploadPage from './pages/DoctorUploadPage';
+import DoctorProfilePage from './pages/DoctorProfilePage';
 import './styles/global.css';
 
 function PrivateRoute({ children, role }) {
@@ -55,7 +55,6 @@ function AppRoutes() {
       {/* Auth */}
       <Route path="/login" element={user ? <Navigate to={defaultPath} replace /> : <LoginPage />} />
       <Route path="/register" element={user ? <Navigate to={defaultPath} replace /> : <RegisterPage />} />
-      <Route path="/register/doctor" element={user ? <Navigate to={defaultPath} replace /> : <DoctorRegisterPage />} />
 
       {/* Patient Routes */}
       <Route path="/dashboard" element={<PrivateRoute role="PATIENT"><AppShell><DashboardPage /></AppShell></PrivateRoute>} />
@@ -70,6 +69,7 @@ function AppRoutes() {
       <Route path="/doctor/appointments" element={<PrivateRoute role="DOCTOR"><DoctorShell><DoctorAppointmentsPage /></DoctorShell></PrivateRoute>} />
       <Route path="/doctor/prescriptions" element={<PrivateRoute role="DOCTOR"><DoctorShell><DoctorPrescriptionPage /></DoctorShell></PrivateRoute>} />
       <Route path="/doctor/upload" element={<PrivateRoute role="DOCTOR"><DoctorShell><DoctorUploadPage /></DoctorShell></PrivateRoute>} />
+      <Route path="/doctor/profile" element={<PrivateRoute role="DOCTOR"><DoctorShell><DoctorProfilePage /></DoctorShell></PrivateRoute>} />
 
       {/* Catch-all */}
       <Route path="*" element={<Navigate to={user ? defaultPath : "/login"} replace />} />

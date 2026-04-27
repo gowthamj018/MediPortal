@@ -3,14 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Calendar, FileEdit, Upload,
-  LogOut, Stethoscope
+  LogOut, Stethoscope, User
 } from 'lucide-react';
 
 const navItems = [
   { label: 'Overview', icon: LayoutDashboard, path: '/doctor/dashboard' },
   { label: 'Appointments', icon: Calendar, path: '/doctor/appointments' },
-  { label: 'Write Prescription', icon: FileEdit, path: '/doctor/prescriptions' },
-  { label: 'Upload Reports', icon: Upload, path: '/doctor/upload' },
+  { label: 'Profile', icon: User, path: '/doctor/profile' },
 ];
 
 export default function DoctorSidebar() {

@@ -12,6 +12,13 @@ public class AppointmentResponse {
     private Long id;
     private Long patientId;
     private String patientName;
+    private String patientEmail;
+    private String patientPhone;
+    private String patientGender;
+    private Integer patientAge;
+    private String patientBloodGroup;
+    private Double patientWeight;
+    private Double patientHeight;
     private Long doctorId;
     private String doctorName;
     private String doctorSpecialization;
@@ -35,6 +42,13 @@ public class AppointmentResponse {
         dto.setId(a.getId());
         dto.setPatientId(a.getPatient().getId());
         dto.setPatientName(a.getPatient().getFirstName() + " " + a.getPatient().getLastName());
+        dto.setPatientEmail(a.getPatient().getEmail());
+        dto.setPatientPhone(a.getPatient().getPhone());
+        dto.setPatientGender(a.getPatient().getGender());
+        dto.setPatientAge(a.getPatient().getAge());
+        dto.setPatientBloodGroup(a.getPatient().getBloodGroup());
+        dto.setPatientWeight(a.getPatient().getWeight());
+        dto.setPatientHeight(a.getPatient().getHeight());
         dto.setDoctorId(a.getDoctor().getId());
         dto.setDoctorName("Dr. " + a.getDoctor().getFirstName() + " " + a.getDoctor().getLastName());
         dto.setDoctorSpecialization(a.getDoctor().getSpecialization());

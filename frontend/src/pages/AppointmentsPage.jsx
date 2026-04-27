@@ -7,6 +7,8 @@ import {
   AlertCircle, Stethoscope, RefreshCw, X, Star
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const STATUS_CONFIG = {
   SCHEDULED: { label: 'Scheduled', color: 'var(--teal)', bg: 'var(--teal-pale)', icon: Clock },
@@ -170,10 +172,26 @@ function RescheduleModal({ appt, onClose, onDone }) {
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
   const [bookedSlots, setBookedSlots] = useState([]);
+  const [doctorSchedule, setDoctorSchedule] = useState(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const minDate = new Date().toISOString().split('T')[0];
+  useEffect(() => {
+    if (appt.doctorId) {
+      api.get(`/api/doctors/${appt.doctorId}`).then(res => {
+         let sched = {};
+         try {
+           sched = JSON.parse(res.data.availableTimeSlots || '{}');
+           if (typeof sched !== 'object' || Array.isArray(sched)) throw new Error();
+         } catch {
+           const days = res.data.availableDays ? res.data.availableDays.split(', ') : [];
+           const slots = res.data.availableTimeSlots ? res.data.availableTimeSlots.split(', ') : [];
+           days.forEach(d => { sched[d] = [...slots]; });
+         }
+         setDoctorSchedule(sched);
+      }).catch(() => setDoctorSchedule({}));
+    }
+  }, [appt.doctorId]);
 
   useEffect(() => {
     if (newDate && appt.doctorId) {
@@ -190,7 +208,9 @@ function RescheduleModal({ appt, onClose, onDone }) {
     finally { setLoading(false); }
   };
 
-  const availableSlots = ALL_TIME_SLOTS.filter(t => !bookedSlots.includes(t));
+  const dayName = newDate ? format(parseISO(newDate), 'EEE') : '';
+  const daySlots = (doctorSchedule && newDate) ? (doctorSchedule[dayName] || []) : [];
+  const availableSlots = daySlots.filter(t => !bookedSlots.includes(t));
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -223,8 +243,22 @@ function RescheduleModal({ appt, onClose, onDone }) {
 
           <div className="form-group">
             <label className="form-label">New Date</label>
-            <input type="date" className="form-control" min={minDate} value={newDate}
-              onChange={e => { setNewDate(e.target.value); setNewTime(''); }} />
+            <div style={{ position: 'relative' }}>
+              <DatePicker
+                selected={newDate ? parseISO(newDate) : null}
+                onChange={d => { setNewDate(format(d, 'yyyy-MM-dd')); setNewTime(''); }}
+                minDate={new Date()}
+                filterDate={date => {
+                  if (!doctorSchedule) return true;
+                  const day = format(date, 'EEE');
+                  return doctorSchedule[day] && doctorSchedule[day].length > 0;
+                }}
+                className="form-control"
+                placeholderText="Select an available date"
+                dateFormat="yyyy-MM-dd"
+              />
+              <Calendar size={16} style={{ position: 'absolute', right: 12, top: 14, color: 'var(--slate-light)', pointerEvents: 'none' }} />
+            </div>
           </div>
 
           {newDate && (
@@ -293,7 +327,7 @@ export default function AppointmentsPage() {
     }
   };
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = format(new Date(), 'yyyy-MM-dd');
   const filtered = appointments.filter(a => {
     if (filter === 'upcoming') return a.appointmentDate >= today && a.status !== 'CANCELLED';
     if (filter === 'past') return a.appointmentDate < today || a.status === 'COMPLETED';

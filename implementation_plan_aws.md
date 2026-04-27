@@ -1,12 +1,13 @@
-# MediPortal — Implementation & Deployment Guide
+# MediVault — Implementation & Deployment Guide (AWS)
 
 ## Current Architecture
 
 MediVault is a **Spring Boot 3.2 + React 18** healthcare portal with:
-- **Backend**: Java 21, Spring Security + JWT, MySQL 8.0
-- **Frontend**: React 18, React Router, Axios, Lucide Icons
+- **Backend**: Java 21, Spring Security + JWT, MySQL 8.0, Redis (OTP/rate-limiting)
+- **Frontend**: React 18, React Router, Axios, Lucide Icons, react-phone-input-2
+- **SMS / OTP**: Fast2SMS (prod) / Mock logger (dev), provider-switched via Spring profiles
 - **Database**: MySQL 8.0 (5 tables)
-- **Deployment**: Docker Compose → AWS EC2 Free Tier
+- **Deployment**: Docker Compose (4 services) → AWS EC2 Free Tier
 
 ---
 
@@ -21,17 +22,17 @@ MediVault is a **Spring Boot 3.2 + React 18** healthcare portal with:
 │ first_name   │     │ first_name   │
 │ last_name    │     │ last_name    │
 │ email        │     │ email        │
-│ password     │     │ password     │
-│ phone        │     │ specialization│
-│ date_of_birth│     │ department   │
-│ gender       │     │ qualification│
-│ address      │     │ experience_years│
-│ blood_group  │     │ available_days│
-│ weight       │     │ consultation_fee│
-│ height       │     │ created_at   │
-│ age          │     └───────┬──────┘
-│ created_at   │             │
-└───────┬──────┘             │
+│ phone        │     │ phone        │
+│ date_of_birth│     │ specialization│
+│ gender       │     │ department   │
+│ blood_group  │     │ qualification│
+│ weight       │     │ experience_years│
+│ height       │     │ available_days│
+│ age          │     │ available_time_slots (JSON)│
+│ created_at   │     │ consultation_fee│
+└───────┬──────┘     │ bio          │
+        │            │ created_at   │
+        │            └───────┬──────┘
         │                    │
         │   ┌────────────────┴──────────────┐
         │   │        appointments           │
@@ -41,8 +42,10 @@ MediVault is a **Spring Boot 3.2 + React 18** healthcare portal with:
             │ FK: doctor_id  → doctors(id)  │
             │ UK: (doctor_id, date, time)   │
             │ appointment_date, time        │
-            │ status, reason, notes         │
-            │ appointment_type              │
+            │ status (SCHEDULED/CONFIRMED/  │
+            │         COMPLETED/CANCELLED/  │
+            │         NO_SHOW)              │
+            │ reason, notes                 │
             └──────┬────────────┬───────────┘
                    │            │
         ┌──────────┴──┐  ┌─────┴──────────┐
@@ -50,16 +53,20 @@ MediVault is a **Spring Boot 3.2 + React 18** healthcare portal with:
         ├─────────────┤  ├────────────────┤
         │ PK: id      │  │ PK: id         │
         │ FK: appt_id │  │ FK: doctor_id  │
-        │ FK: patient  │  │ FK: patient_id │
-        │ FK: doctor   │  │ FK: appt_id(UK)│
+        │ FK: patient │  │ FK: patient_id │
+        │ FK: doctor  │  │ FK: appt_id(UK)│
         │ document_type│  │ rating (1-5)   │
         │ prescription │  │ review (TEXT)  │
         │ _text        │  │ CHECK(1≤r≤5)  │
-        └─────────────┘  └────────────────┘
+        │ file_name    │  └────────────────┘
+        │ file_path    │
+        │ file_type    │
+        │ file_size    │
+        │ uploaded_at  │
+        └─────────────┘
 ```
 
 ### Key Constraints
-- `patients.email` and `doctors.email` → UNIQUE
 - `appointments(doctor_id, appointment_date, appointment_time)` → UNIQUE (prevents double-booking)
 - `doctor_ratings.appointment_id` → UNIQUE (one rating per appointment)
 - `doctor_ratings.rating` → CHECK (1 ≤ rating ≤ 5)
@@ -69,11 +76,19 @@ MediVault is a **Spring Boot 3.2 + React 18** healthcare portal with:
 
 ## Features Implemented
 
+### Authentication (OTP-based, no passwords)
+| Feature | Endpoint | Description |
+|---------|----------|-------------|
+| Generate OTP | `POST /api/auth/generate-otp` | Sends OTP via Fast2SMS (prod) or logs it (dev) |
+| Login | `POST /api/auth/login` | Validates OTP from Redis, returns JWT |
+| Register Patient | `POST /api/auth/register` | OTP-verified patient registration |
+| Register Doctor | `POST /api/auth/register/doctor` | OTP-verified physician registration |
+
+**Rate limiting**: 5 OTP requests per phone per 15-minute window (enforced via Redis).
+
 ### Patient Portal
 | Feature | Endpoint | Description |
 |---------|----------|-------------|
-| Registration | `POST /api/auth/register` | With weight/height/age for BMI |
-| Login | `POST /api/auth/login` | Returns JWT with ROLE_PATIENT |
 | Dashboard | `GET /api/patient/dashboard` | BMI calculation, stats |
 | Appointments | `GET/POST /api/appointments` | Full CRUD + slot validation |
 | Reschedule | `PUT /api/appointments/{id}/reschedule` | With available slot check |
@@ -85,18 +100,20 @@ MediVault is a **Spring Boot 3.2 + React 18** healthcare portal with:
 ### Physician Portal
 | Feature | Endpoint | Description |
 |---------|----------|-------------|
-| Registration | `POST /api/auth/register/doctor` | Self-registration |
-| Dashboard | `GET /api/doctor/dashboard` | Stats, today's schedule |
+| Dashboard | `GET /api/doctor/dashboard` | Stats, today/upcoming counts |
 | Appointments | `GET /api/doctor/appointments` | All/Today/Upcoming filters |
-| Prescriptions | `POST /api/doctor/prescriptions` | Text-based prescriptions |
-| Upload Reports | `POST /api/doctor/documents/upload` | Lab/Imaging reports |
-| Patient List | `GET /api/doctor/patients` | All patients |
+| Complete Appointment | `PUT /api/doctor/appointments/{id}/complete` | Marks status = COMPLETED |
+| Write Prescription | `POST /api/doctor/prescriptions` | Text-based prescriptions (today only) |
+| Upload Report | `POST /api/doctor/documents/upload` | Lab/Imaging reports (today only) |
+| Patient Records | `GET /api/doctor/patients/{patientId}/documents` | Full medical history (auth-gated) |
+| Delete Document | `DELETE /api/doctor/documents/{id}` | Doctor can delete own documents |
+| Patient List | `GET /api/doctor/patients` | Today's patient list |
+| Profile | `GET/PUT /api/doctor/profile` | With available days/slots (JSON) |
 
 ### Rating System
 - Patients can only rate **after** appointment status = `COMPLETED`
 - Each appointment can be rated **once** (unique constraint)
 - Doctor rating is **computed dynamically** as AVG from `doctor_ratings` table
-- Doctors with no ratings show "New" badge (no star rating displayed)
 
 ---
 
@@ -105,38 +122,59 @@ MediVault is a **Spring Boot 3.2 + React 18** healthcare portal with:
 ```
 patient-portal/
 ├── backend/
-│   └── src/main/java/com/patientportal/
-│       ├── config/          SecurityConfig.java
-│       ├── controller/      AuthController, AppointmentController,
-│       │                    DoctorController, DoctorPortalController,
-│       │                    DocumentController, PatientController
-│       ├── dto/             JwtResponse, AppointmentResponse,
-│       │                    DoctorResponse, RegisterRequest,
-│       │                    DoctorRegisterRequest, PrescriptionRequest
-│       ├── model/           Patient, Doctor, Appointment,
-│       │                    Document, DoctorRating
-│       ├── repository/      PatientRepo, DoctorRepo, AppointmentRepo,
-│       │                    DocumentRepo, DoctorRatingRepo
-│       └── security/        JwtUtils, AuthTokenFilter, PatientDetailsService
+│   └── src/main/
+│       ├── java/com/mediportal/
+│       │   ├── config/       SecurityConfig.java
+│       │   ├── controller/   AuthController, AppointmentController,
+│       │   │                 DoctorController, DoctorPortalController,
+│       │   │                 DocumentController, PatientController
+│       │   ├── dto/          JwtResponse, AppointmentResponse, DoctorResponse,
+│       │   │                 RegisterRequest, DoctorRegisterRequest,
+│       │   │                 PrescriptionRequest, GenerateOtpRequest,
+│       │   │                 LoginRequest, MessageResponse
+│       │   ├── model/        Patient, Doctor, Appointment, Document, DoctorRating
+│       │   ├── repository/   (one per model)
+│       │   ├── security/     JwtUtils, AuthTokenFilter, PatientDetailsService
+│       │   └── service/      SmsService (Fast2SMS/mock), RedisService
+│       └── resources/
+│           ├── application.properties        ← shared infrastructure
+│           ├── application-dev.properties    ← mock SMS, verbose logs
+│           └── application-prod.properties   ← fast2sms, reduced logs
 ├── frontend/
 │   └── src/
-│       ├── components/      Sidebar.jsx, DoctorSidebar.jsx
-│       ├── context/         AuthContext.jsx
-│       ├── pages/           LoginPage, RegisterPage, DoctorRegisterPage,
-│       │                    DashboardPage, AppointmentsPage, BookAppointmentPage,
-│       │                    DoctorsPage, DocumentsPage, ProfilePage,
-│       │                    DoctorDashboardPage, DoctorAppointmentsPage,
-│       │                    DoctorPrescriptionPage, DoctorUploadPage
-│       ├── services/        api.js
-│       └── styles/          global.css
-├── Dockerfile               Backend multi-stage build
-├── Dockerfile.frontend      Frontend multi-stage build
-├── docker-compose.yml       3-service stack
+│       ├── components/  Sidebar.jsx, DoctorSidebar.jsx
+│       ├── context/     AuthContext.jsx
+│       ├── pages/       LoginPage, RegisterPage, DoctorRegisterPage,
+│       │                DashboardPage, AppointmentsPage, BookAppointmentPage,
+│       │                DoctorsPage, DocumentsPage, ProfilePage,
+│       │                DoctorDashboardPage, DoctorAppointmentsPage,
+│       │                DoctorProfilePage
+│       ├── services/    api.js
+│       └── styles/      global.css
+├── Dockerfile               Backend multi-stage build (JDK build → JRE runtime)
+├── Dockerfile.frontend      Frontend multi-stage build (Node build → Nginx)
+├── docker-compose.yml       4-service stack (mysql, redis, backend, frontend)
 ├── nginx.conf               SPA routing + API proxy
 ├── init.sql                 MySQL DDL (5 tables)
-├── .env                     Environment variables
-└── implementation_plan.md   This file
+├── .env                     Local dev environment variables (not committed)
+└── implementation_plan_aws.md
 ```
+
+---
+
+## Spring Profiles (Dev vs Prod)
+
+The application uses Spring Boot profiles to automatically switch SMS behaviour:
+
+| Profile | Activated by | SMS | Logging |
+|---------|-------------|-----|---------|
+| `dev` | `SPRING_PROFILES_ACTIVE=dev` (set in docker-compose.yml) | Mock — OTP printed to Docker logs | DEBUG (verbose) |
+| `prod` | `SPRING_PROFILES_ACTIVE=prod` (set on EC2) | Fast2SMS — real SMS | INFO (clean) |
+
+**Property files:**
+- `application.properties` — shared: DB, Redis, JWT, CORS, file storage
+- `application-dev.properties` — `app.sms.provider=mock`
+- `application-prod.properties` — `app.sms.provider=fast2sms`, reads `FAST2SMS_API_KEY` env var
 
 ---
 
@@ -145,6 +183,7 @@ patient-portal/
 ### Prerequisites
 - AWS Account (https://aws.amazon.com/free/)
 - Git repository with your code pushed
+- Fast2SMS account with wallet balance (https://www.fast2sms.com)
 
 ---
 
@@ -210,7 +249,7 @@ docker compose version
 
 ### Step 4: Add Swap Space (Crucial for 1GB t2.micro instances)
 
-Since the `t2.micro` instance only has 1GB of RAM, Docker builds (especially Java) might crash out of memory. We need to add swap space:
+Since the `t2.micro` instance only has 1GB of RAM, Docker builds (especially Java) might crash out of memory. Add swap space:
 
 ```bash
 # Create a 2GB swap file
@@ -237,22 +276,33 @@ cd ~/patient-portal
 
 ### Step 6: Configure Environment Variables
 
-Edit the `.env` file with your VM's Public IPv4:
+Create the `.env` file on the server:
 
 ```bash
 nano .env
 ```
 
-Update these values:
+Paste the following (replace all placeholder values):
 
 ```env
+# Database
 MYSQL_ROOT_PASSWORD=StrongP@ss2026!
 JWT_SECRET=YourOwn64CharSecretKeyHere_ChangeThisInProduction_MinLength64Ch
+
+# Network — set to your EC2 instance's Public IPv4
 CORS_ALLOWED_ORIGINS=http://<YOUR_PUBLIC_IPv4>
 API_URL=http://<YOUR_PUBLIC_IPv4>
+
+# Spring profile — activates application-prod.properties (Fast2SMS, reduced logging)
+SPRING_PROFILES_ACTIVE=prod
+
+# Fast2SMS — required when SPRING_PROFILES_ACTIVE=prod
+# Get your key from: https://www.fast2sms.com/dashboard/dev-api
+# Requires wallet balance of ₹100+ for the Quick SMS (q) route
+FAST2SMS_API_KEY=<YOUR_FAST2SMS_API_KEY>
 ```
 
-> **Important**: Replace `<YOUR_PUBLIC_IPv4>` with your AWS EC2 instance's actual public IP address.
+> **Important**: Replace all `<...>` placeholders. The `SPRING_PROFILES_ACTIVE=prod` setting automatically activates Fast2SMS for OTP delivery — no other SMS config is needed.
 
 Save and exit (`Ctrl+X → Y → Enter`).
 
@@ -266,10 +316,10 @@ docker compose up -d --build
 ```
 
 This will:
-1. **Pull MySQL 8.0** image and initialize the database using `init.sql`
+1. **Pull MySQL 8.0** and **Redis 7** images
 2. **Build the backend** (Maven compile inside Docker, ~3-5 min first time)
 3. **Build the frontend** (npm install + build, ~2-3 min first time)
-4. Start all 3 containers with proper networking
+4. Start all **4 containers** with proper networking and healthchecks
 
 ---
 
@@ -280,11 +330,13 @@ This will:
 docker compose ps
 
 # Expected output:
-# medivault-mysql      mysql:8.0    running   0.0.0.0:3306->3306/tcp
-# medivault-backend    ...          running   0.0.0.0:8080->8080/tcp
-# medivault-frontend   ...          running   0.0.0.0:80->80/tcp
+# medivault-redis      redis:7-alpine  running   6379/tcp
+# medivault-mysql      mysql:8.0       running   3306/tcp
+# medivault-backend    ...             running   0.0.0.0:8080->8080/tcp
+# medivault-frontend   ...             running   0.0.0.0:80->80/tcp
 
-# Check backend logs (look for "Started PatientPortalApplication")
+# Check backend logs — look for "Started PatientPortalApplication"
+# Also verify "The following 1 profile is active: prod"
 docker compose logs backend --tail 30
 
 # Check MySQL is healthy
@@ -297,6 +349,8 @@ curl http://localhost:8080/api/doctors
 curl -I http://localhost:80
 ```
 
+> **Verify SMS is active**: After a user requests an OTP, check the logs. With `prod` profile you should see `OTP sent successfully via Fast2SMS`. With `dev` profile you would see `[MOCK SMS]`.
+
 ---
 
 ### Step 9: Access Your Application
@@ -306,38 +360,39 @@ Open your browser and go to:
 http://<YOUR_PUBLIC_IPv4>
 ```
 
-You should see the MediVault login page!
+You should see the MediVault login page with working OTP delivery!
 
 ---
 
 ## Docker Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   AWS EC2 Instance                       │
-│                                                          │
-│  ┌──────────┐    ┌──────────────┐    ┌──────────────┐   │
-│  │  Nginx   │    │  Spring Boot │    │   MySQL 8.0  │   │
-│  │ Frontend │───▶│   Backend    │───▶│  (Volume:    │   │
-│  │ :80      │/api│   :8080      │    │  mysql-data) │   │
-│  └──────────┘    └──────────────┘    └──────────────┘   │
-│       │                │                                 │
-│       ▼                ▼                                 │
-│  Port 80 (HTTP)   Port 8080           Port 3306          │
-│  (public)         (internal)          (internal)         │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                      AWS EC2 Instance                         │
+│                                                               │
+│  ┌──────────┐    ┌──────────────┐    ┌──────────┐ ┌───────┐  │
+│  │  Nginx   │    │  Spring Boot │    │ MySQL 8  │ │ Redis │  │
+│  │ Frontend │───▶│   Backend    │───▶│ (Volume: │ │ (OTP  │  │
+│  │ :80      │/api│   :8080      │    │ mysql-   │ │ cache)│  │
+│  └──────────┘    └──────────────┘    │ data)    │ └───────┘  │
+│       │                │             └──────────┘            │
+│       ▼                ▼                                      │
+│  Port 80 (HTTP)   Port 8080           Port 3306   Port 6379  │
+│  (public)         (internal)          (internal)  (internal) │
+└──────────────────────────────────────────────────────────────┘
                     │
                     ▼
-              Internet Users
-         http://<PUBLIC_IPv4>
+              Internet Users              Fast2SMS API
+          http://<PUBLIC_IPv4>       (outbound OTP delivery)
 ```
 
 **How it works:**
 1. Users access `http://<IP>` → Nginx serves the React app
 2. React makes API calls to `/api/*` → Nginx proxies to backend:8080
-3. Backend connects to MySQL via internal Docker network (`mysql:3306`)
-4. MySQL data persists in a Docker volume (`mysql-data`)
-5. Uploaded files persist in a Docker volume (`uploads`)
+3. Backend validates OTPs via Redis and sends them via Fast2SMS (prod) or logs them (dev)
+4. Backend connects to MySQL via internal Docker network (`mysql:3306`)
+5. MySQL data persists in a Docker volume (`mysql-data`)
+6. Uploaded files (reports, lab results) persist in a Docker volume (`uploads`)
 
 ---
 
@@ -352,6 +407,9 @@ docker compose logs -f
 docker compose logs -f backend
 docker compose logs -f mysql
 docker compose logs -f frontend
+
+# Verify active Spring profile
+docker compose logs backend | grep "profile"
 ```
 
 ### Restart Services
@@ -359,8 +417,8 @@ docker compose logs -f frontend
 # Restart everything
 docker compose restart
 
-# Restart only backend (e.g., after code change)
-docker compose restart backend
+# Restart only backend (e.g., after env var change — no rebuild needed)
+docker compose up -d --force-recreate backend
 ```
 
 ### Update & Redeploy
@@ -370,8 +428,21 @@ cd ~/patient-portal
 # Pull latest code
 git pull origin main
 
-# Rebuild and restart
+# Rebuild and restart (required when Java/React source changes)
 docker compose up -d --build
+```
+
+### Reset OTP Rate Limit (Emergency)
+If a user is locked out (429 Too Many Requests) before the 15-minute window expires:
+```bash
+# List all rate-limit keys
+docker exec medivault-redis redis-cli KEYS "ATTEMPTS:*"
+
+# Clear a specific phone number's rate limit
+docker exec medivault-redis redis-cli DEL "ATTEMPTS:+919XXXXXXXXX"
+
+# Clear all rate limits (use with caution)
+docker exec medivault-redis redis-cli FLUSHDB
 ```
 
 ### Access MySQL Directly
@@ -436,6 +507,22 @@ nano .env  # fix the IP/domain
 docker compose up -d --build frontend
 ```
 
+### OTP not received (Fast2SMS)
+```bash
+# Check Fast2SMS response in backend logs
+docker compose logs backend | grep -i "fast2sms\|OTP\|ERROR"
+```
+Common causes:
+- `status_code: 999` → Add ₹100+ wallet balance at fast2sms.com
+- `status_code: 996` → Website verification required in Fast2SMS dashboard
+- Empty/null response → Check that `FAST2SMS_API_KEY` is correctly set in `.env`
+
+### OTP rate limit hit (429)
+```bash
+# Clear rate limit for a specific number
+docker exec medivault-redis redis-cli DEL "ATTEMPTS:+91XXXXXXXXXX"
+```
+
 ---
 
 ## Future Enhancements
@@ -443,5 +530,6 @@ docker compose up -d --build frontend
 - **HTTPS**: Add Let's Encrypt SSL with certbot + nginx config
 - **Custom Domain**: Point a domain to AWS EC2 Public IP, update CORS
 - **Monitoring**: Add Prometheus + Grafana via docker-compose
-- **Backups**: Cron job for daily MySQL dumps to object storage
-- **CI/CD**: GitHub Actions to auto-deploy on push
+- **Backups**: Cron job for daily MySQL dumps to S3
+- **CI/CD**: GitHub Actions to auto-deploy on push to main
+- **Notifications**: Extend SmsService to send appointment reminders via Fast2SMS

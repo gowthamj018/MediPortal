@@ -17,9 +17,8 @@ CREATE TABLE IF NOT EXISTS patients (
     id              BIGINT          AUTO_INCREMENT PRIMARY KEY,
     first_name      VARCHAR(100)    NOT NULL,
     last_name       VARCHAR(100)    NOT NULL,
-    email           VARCHAR(255)    NOT NULL,
-    password        VARCHAR(255)    NOT NULL,
-    phone           VARCHAR(20),
+    email           VARCHAR(255),
+    phone           VARCHAR(20)     NOT NULL,
     date_of_birth   DATE,
     gender          VARCHAR(30),
     address         VARCHAR(500),
@@ -30,8 +29,8 @@ CREATE TABLE IF NOT EXISTS patients (
     profile_picture VARCHAR(500),
     created_at      DATETIME        DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT uk_patients_email UNIQUE (email),
-    INDEX idx_patients_email (email)
+    CONSTRAINT uk_patients_phone UNIQUE (phone),
+    INDEX idx_patients_phone (phone)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- -----------------------------------------------------------
@@ -41,23 +40,23 @@ CREATE TABLE IF NOT EXISTS doctors (
     id               BIGINT          AUTO_INCREMENT PRIMARY KEY,
     first_name       VARCHAR(100)    NOT NULL,
     last_name        VARCHAR(100)    NOT NULL,
-    email            VARCHAR(255)    NOT NULL,
-    password         VARCHAR(255)    NOT NULL,
-    phone            VARCHAR(20),
+    email            VARCHAR(255),
+    phone            VARCHAR(20)     NOT NULL,
     specialization   VARCHAR(100),
-    department       VARCHAR(100),
-    qualification    VARCHAR(255),
-    experience_years INT,
+    department       VARCHAR(100)    NOT NULL,
+    qualification    VARCHAR(255)    NOT NULL,
+    experience_years INT             NOT NULL,
     bio              TEXT,
     profile_picture  VARCHAR(500),
-    available_days   VARCHAR(100),
+    available_days   VARCHAR(100)    NOT NULL,
     available_from   VARCHAR(10),
     available_to     VARCHAR(10),
-    consultation_fee DOUBLE,
+    available_time_slots TEXT        NOT NULL,
+    consultation_fee DOUBLE          NOT NULL,
     created_at       DATETIME        DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT uk_doctors_email UNIQUE (email),
-    INDEX idx_doctors_email (email),
+    CONSTRAINT uk_doctors_phone UNIQUE (phone),
+    INDEX idx_doctors_phone (phone),
     INDEX idx_doctors_specialization (specialization)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

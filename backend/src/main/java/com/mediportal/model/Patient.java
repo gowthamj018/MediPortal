@@ -31,13 +31,11 @@ public class Patient {
     private String lastName;
 
     @Email
-    @NotBlank
-    @Column(unique = true)
+    @Column(name = "email")
     private String email;
 
     @NotBlank
-    private String password;
-
+    @Column(unique = true)
     private String phone;
 
     @Column(name = "date_of_birth")

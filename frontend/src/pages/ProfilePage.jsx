@@ -3,6 +3,8 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { User, Mail, Phone, MapPin, Calendar, Droplets, Edit2, Save, X, Activity } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const GENDERS = ['Male', 'Female', 'Other', 'Prefer not to say'];
@@ -134,7 +136,15 @@ export default function ProfilePage() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Phone</label>
-                  <input className="form-control" value={form.phone || ''} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+                  <PhoneInput
+                    country={'in'}
+                    value={form.phone || ''}
+                    onChange={phone => setForm(f => ({ ...f, phone: '+' + phone }))}
+                    inputClass="form-control"
+                    containerStyle={{ width: '100%' }}
+                    inputStyle={{ width: '100%', height: '40px', paddingLeft: '48px', fontFamily: 'var(--font-body)', fontSize: '0.875rem', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)' }}
+                    buttonStyle={{ borderRadius: 'var(--radius-sm) 0 0 var(--radius-sm)', border: '1.5px solid var(--border)', borderRight: 'none', background: 'var(--bg)' }}
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Gender</label>

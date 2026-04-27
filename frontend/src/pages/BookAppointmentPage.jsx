@@ -3,10 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { ChevronLeft, ChevronRight, Stethoscope, Calendar, Clock, CheckCircle, Search } from 'lucide-react';
+import { format } from 'date-fns';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const ALL_TIME_SLOTS = [
-  '09:00','09:30','10:00','10:30','11:00','11:30',
-  '14:00','14:30','15:00','15:30','16:00','16:30','17:00'
+  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
 ];
 
 const APPOINTMENT_TYPES = ['In-Person', 'Video Call', 'Phone Consultation'];
@@ -96,11 +99,49 @@ export default function BookAppointmentPage() {
   );
 
   const selectDoctor = (doc) => {
-    setForm(f => ({ ...f, doctorId: doc.id, selectedDoctor: doc }));
+    setForm(f => ({ ...f, doctorId: doc.id, selectedDoctor: doc, appointmentDate: '', appointmentTime: '' }));
     setStep(2);
   };
 
-  const availableSlots = ALL_TIME_SLOTS.filter(t => !bookedSlots.includes(t));
+  const handleDateChange = (date) => {
+    if (!date) {
+      setForm(f => ({ ...f, appointmentDate: '', appointmentTime: '' }));
+      return;
+    }
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const val = `${year}-${month}-${day}`;
+
+    setForm(f => ({ ...f, appointmentDate: val, appointmentTime: '' }));
+  };
+
+  const isDateSelectable = (date) => {
+    if (!form.selectedDoctor?.availableDays) return true;
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+    return form.selectedDoctor.availableDays.includes(dayName);
+  };
+
+  let doctorSlots = ALL_TIME_SLOTS;
+  if (form.selectedDoctor?.availableTimeSlots) {
+    try {
+      const schedule = JSON.parse(form.selectedDoctor.availableTimeSlots);
+      if (typeof schedule === 'object' && !Array.isArray(schedule)) {
+        if (form.appointmentDate) {
+          const dayName = new Date(form.appointmentDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' });
+          doctorSlots = schedule[dayName] || [];
+        } else {
+          doctorSlots = [];
+        }
+      } else {
+        throw new Error('Legacy array format');
+      }
+    } catch {
+      doctorSlots = form.selectedDoctor.availableTimeSlots.split(', ');
+    }
+  }
+
+  const availableSlots = doctorSlots.filter(t => !bookedSlots.includes(t));
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -120,7 +161,7 @@ export default function BookAppointmentPage() {
     } finally { setSubmitting(false); }
   };
 
-  const minDate = new Date().toISOString().split('T')[0];
+  const minDate = format(new Date(), 'yyyy-MM-dd');
 
   return (
     <div className="page">
@@ -150,7 +191,7 @@ export default function BookAppointmentPage() {
             />
           </div>
           {loading ? (
-            <div className="loading-placeholder">{[1,2,3,4].map(i => <div key={i} className="skeleton-card" />)}</div>
+            <div className="loading-placeholder">{[1, 2, 3, 4].map(i => <div key={i} className="skeleton-card" />)}</div>
           ) : (
             <div className="doctor-select-grid">
               {filteredDoctors.map(doc => (
@@ -192,9 +233,21 @@ export default function BookAppointmentPage() {
           <div className="book-form-grid">
             <div className="card form-section">
               <h4 className="form-section-title"><Calendar size={16} /> Select Date</h4>
-              <input type="date" className="form-control date-picker" min={minDate}
-                value={form.appointmentDate}
-                onChange={e => setForm(f => ({ ...f, appointmentDate: e.target.value, appointmentTime: '' }))} />
+              <DatePicker
+                selected={form.appointmentDate ? new Date(form.appointmentDate + 'T00:00:00') : null}
+                onChange={handleDateChange}
+                filterDate={isDateSelectable}
+                minDate={new Date()}
+                className="form-control date-picker"
+                placeholderText="Select a date"
+                dateFormat="yyyy-MM-dd"
+                wrapperClassName="date-picker-wrapper"
+              />
+              {form.selectedDoctor?.availableDays && (
+                <div style={{ fontSize: '0.8rem', color: 'var(--slate)', marginTop: '8px' }}>
+                  Available days: <strong style={{ color: 'var(--teal)' }}>{form.selectedDoctor.availableDays}</strong>
+                </div>
+              )}
             </div>
 
             <div className="card form-section">

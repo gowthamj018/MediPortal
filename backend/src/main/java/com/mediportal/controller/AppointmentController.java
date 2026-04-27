@@ -40,7 +40,7 @@ public class AppointmentController {
     private DoctorRatingRepository ratingRepository;
 
     private Patient getCurrentPatient(Authentication auth) {
-        return patientRepository.findByEmail(auth.getName()).orElseThrow();
+        return patientRepository.findByPhone(auth.getName()).orElseThrow();
     }
 
     private AppointmentResponse toResponse(Appointment a) {

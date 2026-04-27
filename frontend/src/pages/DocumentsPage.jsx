@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { FileText, Download, Trash2, Upload, Plus, Calendar, User, Eye } from 'lucide-react';
+import { FileText, Download, Calendar, User, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 const TYPE_CONFIG = {
@@ -43,7 +42,7 @@ function PrescriptionCard({ doc }) {
   );
 }
 
-function FileCard({ doc, onDelete, onDownload }) {
+function FileCard({ doc, onDownload }) {
   const cfg = TYPE_CONFIG[doc.documentType] || TYPE_CONFIG.OTHER;
   return (
     <div className="card doc-card">
@@ -70,9 +69,6 @@ function FileCard({ doc, onDelete, onDownload }) {
           className="icon-btn" title="Download">
           <Download size={15} />
         </button>
-        <button className="icon-btn danger" title="Delete" onClick={() => onDelete(doc.id)}>
-          <Trash2 size={15} />
-        </button>
       </div>
     </div>
   );
@@ -92,15 +88,6 @@ export default function DocumentsPage() {
       setDocuments(data);
     } catch { toast.error('Failed to load documents.'); }
     finally { setLoading(false); }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this document?')) return;
-    try {
-      await api.delete(`/api/documents/${id}`);
-      toast.success('Document deleted.');
-      fetchDocuments();
-    } catch { toast.error('Failed to delete.'); }
   };
 
   const handleDownload = async (id, fileName) => {
@@ -165,7 +152,7 @@ export default function DocumentsPage() {
             doc.documentType === 'PRESCRIPTION' && doc.prescriptionText ? (
               <PrescriptionCard key={doc.id} doc={doc} />
             ) : (
-              <FileCard key={doc.id} doc={doc} onDelete={handleDelete} onDownload={handleDownload} />
+              <FileCard key={doc.id} doc={doc} onDownload={handleDownload} />
             )
           ))}
         </div>

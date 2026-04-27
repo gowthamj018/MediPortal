@@ -41,9 +41,10 @@ public class JwtUtils {
                 .compact();
     }
 
-    public String generateTokenFromEmail(String email) {
+    public String generateTokenFromPhone(String phone, String role) {
         return Jwts.builder()
-                .subject(email)
+                .subject(phone)
+                .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(key())
@@ -54,7 +55,7 @@ public class JwtUtils {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
     }
 
-    public String getEmailFromJwtToken(String token) {
+    public String getPhoneFromJwtToken(String token) {
         return Jwts.parser().verifyWith(key()).build()
                 .parseSignedClaims(token).getPayload().getSubject();
     }

@@ -15,15 +15,14 @@ public class RegisterRequest {
     @NotBlank
     private String lastName;
 
-    @NotBlank
     @Email
     private String email;
 
     @NotBlank
-    @Size(min = 6, max = 40)
-    private String password;
-
     private String phone;
+
+    @NotBlank
+    private String otp;
     private LocalDate dateOfBirth;
     private String gender;
     private String bloodGroup;

@@ -8,9 +8,9 @@ import {
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
-function StatCard({ icon: Icon, label, value, color, bg }) {
+function StatCard({ icon: Icon, label, value, color, bg, onClick }) {
   return (
-    <div className="stat-card card">
+    <div className="stat-card card" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default', transition: 'transform 0.2s', ...(onClick ? { ':hover': { transform: 'translateY(-2px)' } } : {}) }}>
       <div className="stat-icon" style={{ background: bg, color }}>
         <Icon size={20} />
       </div>
@@ -57,15 +57,6 @@ export default function DoctorDashboardPage() {
           </div>
           <h2 className="dashboard-greeting">{greeting}, Dr. {user?.lastName}!</h2>
           <p className="dashboard-sub">Here's your schedule overview for today.</p>
-          <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-            <button className="btn btn-primary" onClick={() => navigate('/doctor/prescriptions')}>
-              <FileEdit size={15} /> Write Prescription
-            </button>
-            <button className="btn btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}
-              onClick={() => navigate('/doctor/upload')}>
-              <Upload size={15} /> Upload Report
-            </button>
-          </div>
         </div>
         <div className="dashboard-hero-art">
           <div className="hero-rings">
@@ -80,13 +71,16 @@ export default function DoctorDashboardPage() {
       <div className="stats-row">
         <StatCard icon={Calendar} label="Today's Appointments"
           value={loading ? '—' : stats.todayAppointments || 0}
-          color="var(--teal)" bg="var(--teal-pale)" />
+          color="var(--teal)" bg="var(--teal-pale)"
+          onClick={!loading && stats.todayAppointments > 0 ? () => navigate('/doctor/appointments', { state: { filter: 'today' } }) : null} />
         <StatCard icon={Clock} label="Upcoming"
           value={loading ? '—' : stats.upcomingAppointments || 0}
-          color="#7c3aed" bg="#ede9fe" />
+          color="#7c3aed" bg="#ede9fe"
+          onClick={!loading && stats.upcomingAppointments > 0 ? () => navigate('/doctor/appointments', { state: { filter: 'upcoming' } }) : null} />
         <StatCard icon={Users} label="Total Patients"
           value={loading ? '—' : stats.totalPatients || 0}
-          color="#0891b2" bg="#e0f2fe" />
+          color="#0891b2" bg="#e0f2fe"
+          onClick={!loading && stats.totalPatients > 0 ? () => navigate('/doctor/appointments', { state: { filter: 'all' } }) : null} />
         <StatCard icon={FileText} label="Reports Uploaded"
           value={loading ? '—' : stats.totalReports || 0}
           color="#16a34a" bg="#dcfce7" />

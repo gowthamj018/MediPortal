@@ -3,6 +3,7 @@ package com.mediportal.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -29,19 +30,21 @@ public class Doctor {
 
     private String specialization;
 
+    @NotBlank
     private String department;
 
     @Email
-    @Column(unique = true)
+    @Column(name = "email")
     private String email;
 
+    @NotBlank
+    @Column(unique = true)
     private String phone;
 
     @NotBlank
-    private String password;
-
     private String qualification;
 
+    @NotNull
     @Column(name = "experience_years")
     private Integer experienceYears;
 
@@ -50,6 +53,7 @@ public class Doctor {
     @Column(name = "profile_picture")
     private String profilePicture;
 
+    @NotBlank
     @Column(name = "available_days")
     private String availableDays;
 
@@ -59,6 +63,11 @@ public class Doctor {
     @Column(name = "available_to")
     private String availableTo;
 
+    @NotBlank
+    @Column(name = "available_time_slots")
+    private String availableTimeSlots;
+
+    @NotNull
     @Column(name = "consultation_fee")
     private Double consultationFee;
 

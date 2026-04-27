@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { FileEdit, Search, CheckCircle, User } from 'lucide-react';
 
 export default function DoctorPrescriptionPage() {
+  const location = useLocation();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -20,6 +22,10 @@ export default function DoctorPrescriptionPage() {
     try {
       const { data } = await api.get('/api/doctor/patients');
       setPatients(data);
+      if (location.state?.preselectPatientId) {
+        const p = data.find(p => p.id === location.state.preselectPatientId);
+        if (p) setSelectedPatient(p);
+      }
     } catch { toast.error('Failed to load patients.'); }
     finally { setLoading(false); }
   };

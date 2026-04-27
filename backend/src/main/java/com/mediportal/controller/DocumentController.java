@@ -47,7 +47,7 @@ public class DocumentController {
     private String uploadDir;
 
     private Patient getCurrentPatient(Authentication auth) {
-        return patientRepository.findByEmail(auth.getName()).orElseThrow();
+        return patientRepository.findByPhone(auth.getName()).orElseThrow();
     }
 
     @GetMapping
@@ -114,14 +114,14 @@ public class DocumentController {
 
     @GetMapping("/download/{id}")
     public ResponseEntity<Resource> downloadDocument(@PathVariable Long id, Authentication auth) throws MalformedURLException {
-        String email = auth.getName();
+        String phone = auth.getName();
         Document doc = documentRepository.findById(id).orElseThrow();
 
-        boolean isPatient = patientRepository.findByEmail(email)
+        boolean isPatient = patientRepository.findByPhone(phone)
                 .map(p -> p.getId().equals(doc.getPatient().getId()))
                 .orElse(false);
 
-        boolean isDoctor = doctorRepository.findByEmail(email).isPresent();
+        boolean isDoctor = doctorRepository.findByPhone(phone).isPresent();
 
         if (!isPatient && !isDoctor) {
             return ResponseEntity.status(403).build();
@@ -138,16 +138,7 @@ public class DocumentController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteDocument(@PathVariable Long id, Authentication auth) throws IOException {
-        Patient patient = getCurrentPatient(auth);
-        Document doc = documentRepository.findById(id).orElseThrow();
-        if (!doc.getPatient().getId().equals(patient.getId())) {
-            return ResponseEntity.status(403).build();
-        }
-        if (doc.getFilePath() != null) {
-            Files.deleteIfExists(Paths.get(doc.getFilePath()));
-        }
-        documentRepository.delete(doc);
-        return ResponseEntity.ok(Map.of("message", "Document deleted successfully"));
+        return ResponseEntity.status(403).body(Map.of("message", "Patients are not allowed to delete reports"));
     }
 
     private Map<String, Object> toMap(Document d) {

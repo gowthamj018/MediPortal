@@ -13,23 +13,34 @@ public class DoctorRegisterRequest {
     @NotBlank
     private String lastName;
 
-    @NotBlank
     @Email
     private String email;
 
     @NotBlank
-    @Size(min = 6, max = 40)
-    private String password;
-
     private String phone;
+
+    @NotBlank
+    private String otp;
+
     private String specialization;
+
+    @NotBlank
     private String department;
+
+    @NotBlank
     private String qualification;
+
     private Integer experienceYears;
     private String bio;
     private Double consultationFee;
+
+    @NotBlank
     private String availableDays;
+
     private String availableFrom;
     private String availableTo;
+
+    @NotBlank
+    private String availableTimeSlots;
 }
 

@@ -18,7 +18,7 @@ public class PatientController {
     private PatientRepository patientRepository;
 
     private Patient getCurrentPatient(Authentication auth) {
-        return patientRepository.findByEmail(auth.getName()).orElseThrow();
+        return patientRepository.findByPhone(auth.getName()).orElseThrow();
     }
 
     @GetMapping("/profile")
