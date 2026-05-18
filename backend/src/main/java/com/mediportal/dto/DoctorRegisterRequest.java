@@ -13,6 +13,7 @@ public class DoctorRegisterRequest {
     @NotBlank
     private String lastName;
 
+    @NotBlank
     @Email
     private String email;
 
@@ -20,7 +21,8 @@ public class DoctorRegisterRequest {
     private String phone;
 
     @NotBlank
-    private String otp;
+    @Size(min = 6, message = "Password must be at least 6 characters")
+    private String password;
 
     private String specialization;
 
@@ -43,4 +45,3 @@ public class DoctorRegisterRequest {
     @NotBlank
     private String availableTimeSlots;
 }
-

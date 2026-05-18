@@ -47,7 +47,9 @@ export default function ProfilePage() {
       const { data } = await api.put('/api/patient/profile', {
         firstName: form.firstName,
         lastName: form.lastName,
+        email: form.email,
         phone: form.phone,
+        dateOfBirth: form.dateOfBirth || null,
         address: form.address,
         gender: form.gender,
         bloodGroup: form.bloodGroup,
@@ -135,6 +137,17 @@ export default function ProfilePage() {
                   <input className="form-control" value={form.lastName || ''} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
                 </div>
                 <div className="form-group">
+                  <label className="form-label">Email Address</label>
+                  <input className="form-control" type="email" value={form.email || ''} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="you@example.com" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Gender</label>
+                  <select className="form-control" value={form.gender || ''} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}>
+                    <option value="">Select</option>
+                    {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
                   <label className="form-label">Phone</label>
                   <PhoneInput
                     country={'in'}
@@ -145,13 +158,6 @@ export default function ProfilePage() {
                     inputStyle={{ width: '100%', height: '40px', paddingLeft: '48px', fontFamily: 'var(--font-body)', fontSize: '0.875rem', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)' }}
                     buttonStyle={{ borderRadius: 'var(--radius-sm) 0 0 var(--radius-sm)', border: '1.5px solid var(--border)', borderRight: 'none', background: 'var(--bg)' }}
                   />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Gender</label>
-                  <select className="form-control" value={form.gender || ''} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}>
-                    <option value="">Select</option>
-                    {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
-                  </select>
                 </div>
                 <div className="form-group" style={{ gridColumn: '1/-1' }}>
                   <label className="form-label">Address</label>
@@ -174,6 +180,10 @@ export default function ProfilePage() {
             <div className="card-section-title">Medical Information</div>
             {editing ? (
               <div className="edit-form-grid">
+                <div className="form-group">
+                  <label className="form-label">Date of Birth</label>
+                  <input className="form-control" type="date" value={form.dateOfBirth || ''} onChange={e => setForm(f => ({ ...f, dateOfBirth: e.target.value }))} />
+                </div>
                 <div className="form-group">
                   <label className="form-label">Blood Group</label>
                   <select className="form-control" value={form.bloodGroup || ''} onChange={e => setForm(f => ({ ...f, bloodGroup: e.target.value }))}>

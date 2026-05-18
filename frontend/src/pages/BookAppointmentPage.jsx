@@ -9,7 +9,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 
 const ALL_TIME_SLOTS = [
   '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
+  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00'
 ];
 
 const APPOINTMENT_TYPES = ['In-Person', 'Video Call', 'Phone Consultation'];
@@ -141,7 +141,17 @@ export default function BookAppointmentPage() {
     }
   }
 
-  const availableSlots = doctorSlots.filter(t => !bookedSlots.includes(t));
+  const isToday = form.appointmentDate === format(new Date(), 'yyyy-MM-dd');
+  const now = new Date();
+  // HH:MM string — zero-padded so lexicographic comparison works correctly
+  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  const availableSlots = doctorSlots.filter(t => {
+    if (bookedSlots.includes(t)) return false;           // already booked
+    if (isToday && t <= currentTime) return false;       // past/current slot on today
+    return true;
+  });
+
 
   const handleSubmit = async () => {
     setSubmitting(true);

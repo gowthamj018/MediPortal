@@ -31,7 +31,8 @@ public class AppointmentResponse {
     private String appointmentType;
     private LocalDateTime createdAt;
     private int documentCount;
-    private boolean rated; // whether this appointment has been rated
+    private boolean rated;
+    private String meetLink;   // non-null only for Video Call appointments
 
     public static AppointmentResponse fromAppointment(Appointment a) {
         return fromAppointment(a, false);
@@ -62,6 +63,7 @@ public class AppointmentResponse {
         dto.setCreatedAt(a.getCreatedAt());
         dto.setDocumentCount(a.getDocuments() != null ? a.getDocuments().size() : 0);
         dto.setRated(rated);
+        dto.setMeetLink(a.getMeetLink());
         return dto;
     }
 }

@@ -43,7 +43,10 @@ public class Appointment {
     private String notes;
 
     @Column(name = "appointment_type")
-    private String appointmentType; // In-Person / Video / Phone
+    private String appointmentType; // In-Person / Video Call / Phone Consultation
+
+    @Column(name = "meet_link")
+    private String meetLink; // Google Meet link, set only for Video Call appointments
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

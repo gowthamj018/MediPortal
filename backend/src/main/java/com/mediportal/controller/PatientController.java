@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -34,10 +35,15 @@ public class PatientController {
 
         if (updates.containsKey("firstName")) patient.setFirstName((String) updates.get("firstName"));
         if (updates.containsKey("lastName")) patient.setLastName((String) updates.get("lastName"));
+        if (updates.containsKey("email")) patient.setEmail((String) updates.get("email"));
         if (updates.containsKey("phone")) patient.setPhone((String) updates.get("phone"));
         if (updates.containsKey("address")) patient.setAddress((String) updates.get("address"));
         if (updates.containsKey("gender")) patient.setGender((String) updates.get("gender"));
         if (updates.containsKey("bloodGroup")) patient.setBloodGroup((String) updates.get("bloodGroup"));
+        if (updates.containsKey("dateOfBirth")) {
+            Object dob = updates.get("dateOfBirth");
+            patient.setDateOfBirth(dob != null && !dob.toString().isBlank() ? LocalDate.parse(dob.toString()) : null);
+        }
         if (updates.containsKey("weight")) {
             Object w = updates.get("weight");
             patient.setWeight(w != null ? Double.parseDouble(w.toString()) : null);

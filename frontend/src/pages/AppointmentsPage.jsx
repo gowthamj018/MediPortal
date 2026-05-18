@@ -15,12 +15,12 @@ const STATUS_CONFIG = {
   CONFIRMED: { label: 'Confirmed', color: '#22c55e', bg: '#dcfce7', icon: CheckCircle },
   COMPLETED: { label: 'Completed', color: 'var(--slate)', bg: '#f1f5f9', icon: CheckCircle },
   CANCELLED: { label: 'Cancelled', color: 'var(--red)', bg: 'var(--red-pale)', icon: XCircle },
-  NO_SHOW:   { label: 'No Show',   color: 'var(--amber)', bg: 'var(--amber-pale)', icon: AlertCircle },
+  NO_SHOW: { label: 'No Show', color: 'var(--amber)', bg: 'var(--amber-pale)', icon: AlertCircle },
 };
 
 const ALL_TIME_SLOTS = [
-  '09:00','09:30','10:00','10:30','11:00','11:30',
-  '14:00','14:30','15:00','15:30','16:00','16:30','17:00'
+  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00'
 ];
 
 function AppointmentCard({ appt, onCancel, onReschedule, onRate }) {
@@ -65,6 +65,19 @@ function AppointmentCard({ appt, onCancel, onReschedule, onRate }) {
         {appt.reason && (
           <p className="appt-reason">"{appt.reason}"</p>
         )}
+        {appt.meetLink && ['SCHEDULED', 'CONFIRMED'].includes(appt.status) && (
+          <a
+            href={appt.meetLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary btn-sm"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, textDecoration: 'none' }}
+          >
+            🎥 Join Video Call
+          </a>
+        )}
+
+
       </div>
 
       {(isCancellable || canRate) && (
@@ -130,14 +143,16 @@ function RatingModal({ appt, onClose, onDone }) {
           </div>
 
           <div className="rating-stars" style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
-            {[1,2,3,4,5].map(i => (
+            {[1, 2, 3, 4, 5].map(i => (
               <button key={i} type="button"
                 className="star-btn"
                 onMouseEnter={() => setHovered(i)}
                 onMouseLeave={() => setHovered(0)}
                 onClick={() => setRating(i)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, transition: 'transform 0.15s' ,
-                  transform: (hovered >= i || rating >= i) ? 'scale(1.15)' : 'scale(1)' }}>
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 4, transition: 'transform 0.15s',
+                  transform: (hovered >= i || rating >= i) ? 'scale(1.15)' : 'scale(1)'
+                }}>
                 <Star size={32}
                   color="#f59e0b"
                   fill={(hovered >= i || (!hovered && rating >= i)) ? '#f59e0b' : 'transparent'}
@@ -179,16 +194,16 @@ function RescheduleModal({ appt, onClose, onDone }) {
   useEffect(() => {
     if (appt.doctorId) {
       api.get(`/api/doctors/${appt.doctorId}`).then(res => {
-         let sched = {};
-         try {
-           sched = JSON.parse(res.data.availableTimeSlots || '{}');
-           if (typeof sched !== 'object' || Array.isArray(sched)) throw new Error();
-         } catch {
-           const days = res.data.availableDays ? res.data.availableDays.split(', ') : [];
-           const slots = res.data.availableTimeSlots ? res.data.availableTimeSlots.split(', ') : [];
-           days.forEach(d => { sched[d] = [...slots]; });
-         }
-         setDoctorSchedule(sched);
+        let sched = {};
+        try {
+          sched = JSON.parse(res.data.availableTimeSlots || '{}');
+          if (typeof sched !== 'object' || Array.isArray(sched)) throw new Error();
+        } catch {
+          const days = res.data.availableDays ? res.data.availableDays.split(', ') : [];
+          const slots = res.data.availableTimeSlots ? res.data.availableTimeSlots.split(', ') : [];
+          days.forEach(d => { sched[d] = [...slots]; });
+        }
+        setDoctorSchedule(sched);
       }).catch(() => setDoctorSchedule({}));
     }
   }, [appt.doctorId]);
@@ -210,7 +225,16 @@ function RescheduleModal({ appt, onClose, onDone }) {
 
   const dayName = newDate ? format(parseISO(newDate), 'EEE') : '';
   const daySlots = (doctorSchedule && newDate) ? (doctorSchedule[dayName] || []) : [];
-  const availableSlots = daySlots.filter(t => !bookedSlots.includes(t));
+  const isToday = newDate === format(new Date(), 'yyyy-MM-dd');
+  const now = new Date();
+  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  const availableSlots = daySlots.filter(t => {
+    if (bookedSlots.includes(t)) return false;
+    if (isToday && t <= currentTime) return false;
+    return true;
+  });
+
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -237,7 +261,7 @@ function RescheduleModal({ appt, onClose, onDone }) {
           <div className="card" style={{ padding: '14px 16px', marginBottom: 20, background: 'var(--teal-pale)', border: '1px solid var(--teal)' }}>
             <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{appt.doctorName}</div>
             <div style={{ fontSize: '0.8rem', color: 'var(--slate)' }}>
-              Current: {appt.appointmentDate ? format(parseISO(appt.appointmentDate), 'EEE, MMM d') : ''} at {appt.appointmentTime?.slice(0,5)}
+              Current: {appt.appointmentDate ? format(parseISO(appt.appointmentDate), 'EEE, MMM d') : ''} at {appt.appointmentTime?.slice(0, 5)}
             </div>
           </div>
 
@@ -357,7 +381,7 @@ export default function AppointmentsPage() {
 
       {loading ? (
         <div className="loading-placeholder">
-          {[1,2,3].map(i => <div key={i} className="skeleton-card" />)}
+          {[1, 2, 3].map(i => <div key={i} className="skeleton-card" />)}
         </div>
       ) : filtered.length === 0 ? (
         <div className="empty-state">

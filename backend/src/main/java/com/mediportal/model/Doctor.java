@@ -71,6 +71,9 @@ public class Doctor {
     @Column(name = "consultation_fee")
     private Double consultationFee;
 
+    @Column(name = "password")
+    private String password; // BCrypt-hashed, nullable
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -82,4 +85,3 @@ public class Doctor {
         this.createdAt = LocalDateTime.now();
     }
 }
-

@@ -15,7 +15,7 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const ALL_TIME_SLOTS = [
   '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
+  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00'
 ];
 
 function InfoRow({ icon: Icon, label, value, children }) {
@@ -76,7 +76,7 @@ export default function DoctorProfilePage() {
       updatedSchedule[day] = [];
       setActiveDayTab(day);
     }
-    
+
     updatedDays.sort((a, b) => DAYS.indexOf(a) - DAYS.indexOf(b));
     setForm({ ...form, availableDays: updatedDays.join(', '), schedule: updatedSchedule });
   };
@@ -90,7 +90,7 @@ export default function DoctorProfilePage() {
     } else {
       updatedSlots.push(slot);
     }
-    
+
     updatedSlots.sort((a, b) => ALL_TIME_SLOTS.indexOf(a) - ALL_TIME_SLOTS.indexOf(b));
     setForm({ ...form, schedule: { ...form.schedule, [activeDayTab]: updatedSlots } });
   };
@@ -101,6 +101,7 @@ export default function DoctorProfilePage() {
       const { data } = await api.put('/api/doctor/profile', {
         firstName: form.firstName,
         lastName: form.lastName,
+        email: form.email,
         phone: form.phone,
         department: form.department,
         specialization: form.specialization,
@@ -125,7 +126,7 @@ export default function DoctorProfilePage() {
 
   if (loading) return (
     <div className="page">
-      <div className="loading-placeholder">{[1,2].map(i => <div key={i} className="skeleton-card tall" />)}</div>
+      <div className="loading-placeholder">{[1, 2].map(i => <div key={i} className="skeleton-card tall" />)}</div>
     </div>
   );
 
@@ -181,6 +182,10 @@ export default function DoctorProfilePage() {
                 <div className="form-group">
                   <label className="form-label">Last Name</label>
                   <input className="form-control" value={form.lastName || ''} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
+                </div>
+                <div className="form-group" style={{ gridColumn: '1/-1' }}>
+                  <label className="form-label">Email Address</label>
+                  <input className="form-control" type="email" value={form.email || ''} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="you@example.com" />
                 </div>
                 <div className="form-group" style={{ gridColumn: '1/-1' }}>
                   <label className="form-label">Phone</label>

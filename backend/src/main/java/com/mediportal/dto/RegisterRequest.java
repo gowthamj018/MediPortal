@@ -15,6 +15,7 @@ public class RegisterRequest {
     @NotBlank
     private String lastName;
 
+    @NotBlank
     @Email
     private String email;
 
@@ -22,12 +23,13 @@ public class RegisterRequest {
     private String phone;
 
     @NotBlank
-    private String otp;
+    @Size(min = 6, message = "Password must be at least 6 characters")
+    private String password;
+
     private LocalDate dateOfBirth;
     private String gender;
     private String bloodGroup;
-    private Double weight;  // in kg
-    private Double height;  // in cm
+    private Double weight;
+    private Double height;
     private Integer age;
 }
-

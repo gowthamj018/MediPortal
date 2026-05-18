@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { Calendar, Clock, User, Stethoscope, CheckCircle, XCircle, AlertCircle, FileEdit, Upload, X, Droplets, Phone, FileText, Eye, Activity, FilePlus, Trash2 } from 'lucide-react';
+import { Calendar, Clock, User, Stethoscope, CheckCircle, XCircle, AlertCircle, FileEdit, Upload, X, Droplets, Phone, FileText, Eye, Activity, FilePlus, Trash2, ChevronDown } from 'lucide-react';
+
 import { format, parseISO } from 'date-fns';
 
 const STATUS_CONFIG = {
@@ -10,7 +11,7 @@ const STATUS_CONFIG = {
   CONFIRMED: { label: 'Confirmed', color: '#22c55e', bg: '#dcfce7', icon: CheckCircle },
   COMPLETED: { label: 'Completed', color: '#fff', bg: 'linear-gradient(135deg, #10b981, #059669)', icon: CheckCircle },
   CANCELLED: { label: 'Cancelled', color: 'var(--red)', bg: 'var(--red-pale)', icon: XCircle },
-  NO_SHOW:   { label: 'No Show',   color: 'var(--amber)', bg: 'var(--amber-pale)', icon: AlertCircle },
+  NO_SHOW:   { label: 'Missed',    color: '#b45309', bg: '#fef3c7', icon: AlertCircle },
 };
 
 export default function DoctorAppointmentsPage() {
@@ -24,17 +25,18 @@ export default function DoctorAppointmentsPage() {
   const [modalTab, setModalTab] = useState('details');
   const [patientDocs, setPatientDocs] = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);
-  
+
   const [prescriptionText, setPrescriptionText] = useState('');
   const [desc, setDesc] = useState('');
   const [submittingRx, setSubmittingRx] = useState(false);
-  
+
   const [file, setFile] = useState(null);
   const [docType, setDocType] = useState('LAB_REPORT');
   const [uploadDesc, setUploadDesc] = useState('');
   const [submittingUp, setSubmittingUp] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
 
   useEffect(() => { fetchAppointments(); }, []);
 
@@ -150,10 +152,20 @@ export default function DoctorAppointmentsPage() {
     if (!window.confirm("Mark this appointment as completed?")) return;
     try {
       await api.put(`/api/doctor/appointments/${selectedAppt.id}/complete`);
-      toast.success("Appointment completed");
+      toast.success("Appointment marked as completed");
       setSelectedAppt({ ...selectedAppt, status: 'COMPLETED' });
       fetchAppointments();
     } catch { toast.error("Failed to update status"); }
+  };
+
+  const handleMarkNoShow = async () => {
+    if (!window.confirm("Mark this appointment as missed? The patient won't be able to get a prescription for this visit.")) return;
+    try {
+      await api.put(`/api/doctor/appointments/${selectedAppt.id}/no-show`);
+      toast.success("Appointment marked as missed");
+      setSelectedAppt({ ...selectedAppt, status: 'NO_SHOW' });
+      fetchAppointments();
+    } catch (err) { toast.error(err.response?.data?.message || "Failed to update status"); }
   };
 
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -174,7 +186,7 @@ export default function DoctorAppointmentsPage() {
       </div>
 
       <div className="filter-tabs">
-        {[['all','All'],['today','Today'],['upcoming','Upcoming'],['past','Past']].map(([v,l]) => (
+        {[['all', 'All'], ['today', 'Today'], ['upcoming', 'Upcoming'], ['past', 'Past']].map(([v, l]) => (
           <button key={v} className={`filter-tab ${filter === v ? 'active' : ''}`} onClick={() => setFilter(v)}>
             {l}
           </button>
@@ -183,7 +195,7 @@ export default function DoctorAppointmentsPage() {
 
       {loading ? (
         <div className="loading-placeholder">
-          {[1,2,3].map(i => <div key={i} className="skeleton-card" />)}
+          {[1, 2, 3].map(i => <div key={i} className="skeleton-card" />)}
         </div>
       ) : filtered.length === 0 ? (
         <div className="empty-state">
@@ -225,7 +237,7 @@ export default function DoctorAppointmentsPage() {
                     </div>
                     <div className="appt-meta-item">
                       <Clock size={14} color="var(--slate)" />
-                      <span>{a.appointmentTime?.slice(0,5) || '—'}</span>
+                      <span>{a.appointmentTime?.slice(0, 5) || '—'}</span>
                     </div>
                     <div className="appt-meta-item">
                       <Stethoscope size={14} color="var(--slate)" />
@@ -240,16 +252,16 @@ export default function DoctorAppointmentsPage() {
       )}
 
       {selectedAppt && (
-        <div className="floating-dialog card" onClick={e => e.stopPropagation()} style={{ 
-          position: 'fixed', top: '50%', left: 'calc(50% + 130px)', transform: 'translate(-50%, -50%)', 
-          zIndex: 1000, maxWidth: '500px', width: '90%', padding: '24px', 
-          borderRadius: '16px', background: 'var(--bg-card)', 
+        <div className="floating-dialog card" onClick={e => e.stopPropagation()} style={{
+          position: 'fixed', top: '50%', left: 'calc(50% + 130px)', transform: 'translate(-50%, -50%)',
+          zIndex: 1000, maxWidth: '500px', width: '90%', padding: '24px',
+          borderRadius: '16px', background: 'var(--bg-card)',
           boxShadow: '0 20px 40px rgba(0,0,0,0.15), 0 8px 16px rgba(0,0,0,0.1)'
         }}>
           <button onClick={() => setSelectedAppt(null)} style={{ position: 'absolute', right: 20, top: 20, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--slate)', padding: '4px', borderRadius: '4px' }}>
             <X size={20} />
           </button>
-          
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', paddingRight: '30px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <div className="doctor-avatar" style={{ width: '48px', height: '48px', fontSize: '1.1rem', background: '#ede9fe', color: '#7c3aed', flexShrink: 0 }}>
@@ -262,14 +274,92 @@ export default function DoctorAppointmentsPage() {
                 </div>
               </div>
             </div>
-            {selectedAppt.status !== 'COMPLETED' && selectedAppt.appointmentDate === today && (
-              <button className="btn btn-sm" onClick={handleCompleteAppt} style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <CheckCircle size={14} /> Mark as Completed
-              </button>
+            {/* Status update — custom dropdown for today/past active appointments */}
+            {['SCHEDULED', 'CONFIRMED'].includes(selectedAppt.status) && selectedAppt.appointmentDate <= today && (
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setStatusMenuOpen(o => !o)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '6px 14px', borderRadius: '10px',
+                    border: '1.5px solid var(--border)',
+                    background: statusMenuOpen ? 'var(--teal-pale)' : 'var(--bg-card)',
+                    color: 'var(--text-primary)', fontSize: '0.82rem',
+                    fontWeight: 600, cursor: 'pointer',
+                    transition: 'all 0.15s', whiteSpace: 'nowrap',
+                    boxShadow: statusMenuOpen ? '0 0 0 3px rgba(13,148,136,0.15)' : 'none'
+                  }}
+                >
+                  Update Status <ChevronDown size={14} color="var(--slate)"
+                    style={{ transform: statusMenuOpen ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
+                </button>
+
+                {statusMenuOpen && (
+                  <>
+                    {/* Click-outside overlay */}
+                    <div onClick={() => setStatusMenuOpen(false)}
+                      style={{ position: 'fixed', inset: 0, zIndex: 99 }} />
+                    <div style={{
+                      position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                      background: 'var(--bg-card)', borderRadius: '12px',
+                      border: '1px solid var(--border)',
+                      boxShadow: '0 12px 32px rgba(0,0,0,0.14), 0 4px 8px rgba(0,0,0,0.08)',
+                      zIndex: 100, minWidth: '190px', overflow: 'hidden'
+                    }}>
+                      <div style={{ padding: '8px 14px 6px', fontSize: '0.68rem', color: 'var(--slate-light)', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 600 }}>
+                        Select outcome
+                      </div>
+                      <button
+                        onClick={async () => { setStatusMenuOpen(false); await handleCompleteAppt(); }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                          padding: '10px 14px', border: 'none', background: 'none',
+                          cursor: 'pointer', textAlign: 'left', fontSize: '0.85rem',
+                          fontWeight: 500, color: '#15803d', transition: 'background 0.12s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f0fdf4'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '8px', background: '#dcfce7' }}>
+                          <CheckCircle size={15} color="#16a34a" />
+                        </span>
+                        Completed
+                      </button>
+                      <div style={{ margin: '0 10px', height: '1px', background: 'var(--border)' }} />
+                      <button
+                        onClick={async () => { setStatusMenuOpen(false); await handleMarkNoShow(); }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                          padding: '10px 14px', border: 'none', background: 'none',
+                          cursor: 'pointer', textAlign: 'left', fontSize: '0.85rem',
+                          fontWeight: 500, color: '#b45309', transition: 'background 0.12s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#fffbeb'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '8px', background: '#fef3c7' }}>
+                          <AlertCircle size={15} color="#b45309" />
+                        </span>
+                        Missed
+                      </button>
+                      <div style={{ height: '6px' }} />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            {/* Future appointments — no action available yet */}
+            {['SCHEDULED', 'CONFIRMED'].includes(selectedAppt.status) && selectedAppt.appointmentDate > today && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--slate-light)', fontStyle: 'italic' }}>Upcoming appointment</span>
             )}
             {selectedAppt.status === 'COMPLETED' && (
               <span className="badge" style={{ background: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={12} /> Completed</span>
             )}
+            {selectedAppt.status === 'NO_SHOW' && (
+              <span className="badge" style={{ background: '#fef3c7', color: '#b45309', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={12} /> Missed</span>
+            )}
+
+
           </div>
 
           <div className="tabs" style={{ marginBottom: '20px' }}>
@@ -305,50 +395,77 @@ export default function DoctorAppointmentsPage() {
                   <div style={{ fontSize: '0.7rem', color: 'var(--slate-light)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Reason for Visit</div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>{selectedAppt.reason || 'Consultation'}</div>
                 </div>
+
+                {/* Join Video Call button — same link as patient so both enter the same room */}
+                {selectedAppt.meetLink && ['SCHEDULED', 'CONFIRMED'].includes(selectedAppt.status) && (
+                  <div style={{ marginTop: '4px', padding: '14px', background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', border: '1px solid #bfdbfe', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: '#1d4ed8', fontWeight: 600, marginBottom: '2px' }}>📹 Video Call Appointment</div>
+                      <div style={{ fontSize: '0.7rem', color: '#3b82f6' }}>Patient and doctor join the same meeting room</div>
+                    </div>
+                    <a
+                      href={selectedAppt.meetLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#1d4ed8', color: '#fff', padding: '8px 16px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}
+                    >
+                      🎥 Join Video Call
+                    </a>
+                  </div>
+                )}
               </>
             )}
 
+
             {modalTab === 'history' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {docsLoading ? <p style={{ fontSize: '0.8rem', color: 'var(--slate)' }}>Loading records...</p> : 
-                 patientDocs.length === 0 ? <p style={{ fontSize: '0.8rem', color: 'var(--slate)' }}>No prior records found.</p> :
-                 patientDocs.map(doc => (
-                  <div key={doc.id} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '12px', border: '1px solid var(--border)', borderRadius: '8px' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        {doc.documentType === 'PRESCRIPTION' ? <FileText size={16} color="var(--teal)" /> : <Activity size={16} color="var(--amber)" />}
-                        <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{doc.originalName || doc.description || doc.documentType}</span>
-                        <span className="badge badge-slate" style={{ fontSize: '0.65rem' }}>{format(parseISO(doc.uploadedAt), 'MMM d, yyyy')}</span>
-                      </div>
-                      {doc.description && doc.documentType !== 'PRESCRIPTION' && <p style={{ fontSize: '0.75rem', color: 'var(--slate)', margin: '4px 0 0' }}>{doc.description}</p>}
-                      {doc.prescriptionText && (
-                        <div style={{ background: 'var(--bg)', padding: '8px 12px', borderRadius: '6px', marginTop: '8px', fontSize: '0.75rem', whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>
-                          {doc.prescriptionText}
+                {docsLoading ? <p style={{ fontSize: '0.8rem', color: 'var(--slate)' }}>Loading records...</p> :
+                  patientDocs.length === 0 ? <p style={{ fontSize: '0.8rem', color: 'var(--slate)' }}>No prior records found.</p> :
+                    patientDocs.map(doc => (
+                      <div key={doc.id} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '12px', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                            {doc.documentType === 'PRESCRIPTION' ? <FileText size={16} color="var(--teal)" /> : <Activity size={16} color="var(--amber)" />}
+                            <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{doc.originalName || doc.description || doc.documentType}</span>
+                            <span className="badge badge-slate" style={{ fontSize: '0.65rem' }}>{format(parseISO(doc.uploadedAt), 'MMM d, yyyy')}</span>
+                          </div>
+                          {doc.description && doc.documentType !== 'PRESCRIPTION' && <p style={{ fontSize: '0.75rem', color: 'var(--slate)', margin: '4px 0 0' }}>{doc.description}</p>}
+                          {doc.prescriptionText && (
+                            <div style={{ background: 'var(--bg)', padding: '8px 12px', borderRadius: '6px', marginTop: '8px', fontSize: '0.75rem', whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>
+                              {doc.prescriptionText}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    {(doc.fileName || doc.originalName) && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '12px' }}>
-                        <button onClick={() => handleViewDocument(doc.id, doc.originalName)} className="btn btn-ghost btn-sm" style={{ padding: '6px', color: 'var(--teal)' }} title="View Document">
-                          <Eye size={14} />
-                        </button>
-                        <button onClick={() => handleDeleteDoc(doc.id)} className="btn btn-ghost btn-sm" style={{ padding: '6px', color: 'var(--red)' }} title="Delete Document">
-                          <Trash2 size={14} />
-                        </button>
+                        {/* View + Delete — only for actual file documents (not prescriptions) */}
+                        {doc.documentType !== 'PRESCRIPTION' && (doc.fileName || doc.originalName) && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '12px' }}>
+                            <button onClick={() => handleViewDocument(doc.id, doc.originalName)} className="btn btn-ghost btn-sm" style={{ padding: '6px', color: 'var(--teal)' }} title="View Document">
+                              <Eye size={14} />
+                            </button>
+                            <button onClick={() => handleDeleteDoc(doc.id)} className="btn btn-ghost btn-sm" style={{ padding: '6px', color: 'var(--red)' }} title="Delete Document">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        )}
+                        {/* Delete-only — for prescriptions (no file to view) */}
+                        {doc.documentType === 'PRESCRIPTION' && (
+                          <button onClick={() => handleDeleteDoc(doc.id)} className="btn btn-ghost btn-sm" style={{ padding: '6px', marginLeft: '12px', color: 'var(--red)' }} title="Delete Prescription">
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+
                       </div>
-                    )}
-                    {!doc.fileName && (
-                      <button onClick={() => handleDeleteDoc(doc.id)} className="btn btn-ghost btn-sm" style={{ padding: '6px', marginLeft: '12px', color: 'var(--red)' }} title="Delete Prescription">
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                    ))}
               </div>
             )}
 
             {modalTab === 'prescribe' && (
-              selectedAppt.appointmentDate !== today ? (
+              selectedAppt.status === 'NO_SHOW' ? (
+                <div className="empty-state" style={{ padding: '30px 20px' }}>
+                  <AlertCircle size={28} color="#b45309" />
+                  <p style={{ color: '#b45309', marginTop: '8px', fontSize: '0.85rem', fontWeight: 500 }}>Patient missed this appointment. Prescriptions cannot be written.</p>
+                </div>
+              ) : selectedAppt.appointmentDate !== today ? (
                 <div className="empty-state" style={{ padding: '30px 20px' }}>
                   <AlertCircle size={28} color="var(--red)" />
                   <p style={{ color: 'var(--red)', marginTop: '8px', fontSize: '0.85rem' }}>Prescriptions can only be written for today's active appointments.</p>
@@ -371,7 +488,12 @@ export default function DoctorAppointmentsPage() {
             )}
 
             {modalTab === 'upload' && (
-              selectedAppt.appointmentDate !== today ? (
+              selectedAppt.status === 'NO_SHOW' ? (
+                <div className="empty-state" style={{ padding: '30px 20px' }}>
+                  <AlertCircle size={28} color="#b45309" />
+                  <p style={{ color: '#b45309', marginTop: '8px', fontSize: '0.85rem', fontWeight: 500 }}>Patient missed this appointment. Reports cannot be uploaded.</p>
+                </div>
+              ) : selectedAppt.appointmentDate !== today ? (
                 <div className="empty-state" style={{ padding: '30px 20px' }}>
                   <AlertCircle size={28} color="var(--red)" />
                   <p style={{ color: 'var(--red)', marginTop: '8px', fontSize: '0.85rem' }}>Reports can only be uploaded for today's active appointments.</p>

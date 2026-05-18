@@ -22,7 +22,15 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query("SELECT a FROM Appointment a WHERE a.patient.id = :patientId AND a.appointmentDate < :today ORDER BY a.appointmentDate DESC")
     List<Appointment> findPastByPatientId(@Param("patientId") Long patientId, @Param("today") LocalDate today);
 
-    boolean existsByDoctorIdAndAppointmentDateAndAppointmentTime(Long doctorId, LocalDate date, LocalTime time);
+    @Query("SELECT COUNT(a) > 0 FROM Appointment a " +
+           "WHERE a.doctor.id = :doctorId " +
+           "AND a.appointmentDate = :date " +
+           "AND a.appointmentTime = :time " +
+           "AND a.status <> 'CANCELLED'")
+    boolean isSlotTaken(@Param("doctorId") Long doctorId,
+                        @Param("date") LocalDate date,
+                        @Param("time") LocalTime time);
+
 
     // Doctor-side queries
     List<Appointment> findByDoctorIdOrderByAppointmentDateDescAppointmentTimeDesc(Long doctorId);

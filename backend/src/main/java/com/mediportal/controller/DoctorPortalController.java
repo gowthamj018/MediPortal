@@ -50,6 +50,7 @@ public class DoctorPortalController {
         Doctor doctor = getCurrentDoctor(auth);
         if (updates.containsKey("firstName")) doctor.setFirstName((String) updates.get("firstName"));
         if (updates.containsKey("lastName")) doctor.setLastName((String) updates.get("lastName"));
+        if (updates.containsKey("email")) doctor.setEmail((String) updates.get("email"));
         if (updates.containsKey("phone")) doctor.setPhone((String) updates.get("phone"));
         if (updates.containsKey("department")) doctor.setDepartment((String) updates.get("department"));
         if (updates.containsKey("specialization")) doctor.setSpecialization((String) updates.get("specialization"));
@@ -268,6 +269,24 @@ public class DoctorPortalController {
         appointmentRepository.save(appointment);
         return ResponseEntity.ok(Map.of("message", "Appointment marked as completed"));
     }
+
+    @PutMapping("/appointments/{id}/no-show")
+    public ResponseEntity<?> markNoShow(@PathVariable Long id, Authentication auth) {
+        Doctor doctor = getCurrentDoctor(auth);
+        Appointment appointment = appointmentRepository.findById(id).orElseThrow();
+        if (!appointment.getDoctor().getId().equals(doctor.getId())) {
+            return ResponseEntity.status(403).body(new MessageResponse("Unauthorized"));
+        }
+        if (appointment.getStatus() == Appointment.AppointmentStatus.COMPLETED ||
+                appointment.getStatus() == Appointment.AppointmentStatus.CANCELLED) {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Cannot mark a completed or cancelled appointment as missed."));
+        }
+        appointment.setStatus(Appointment.AppointmentStatus.NO_SHOW);
+        appointmentRepository.save(appointment);
+        return ResponseEntity.ok(Map.of("message", "Appointment marked as missed"));
+    }
+
 
     private Map<String, Object> toDocMap(Document d) {
         Map<String, Object> map = new LinkedHashMap<>();

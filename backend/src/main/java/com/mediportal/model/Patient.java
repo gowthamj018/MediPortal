@@ -57,6 +57,9 @@ public class Patient {
     @Column(name = "profile_picture")
     private String profilePicture;
 
+    @Column(name = "password")
+    private String password; // BCrypt-hashed, nullable (OTP-only users have no password)
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

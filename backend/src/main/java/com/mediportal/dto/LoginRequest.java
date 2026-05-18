@@ -1,15 +1,18 @@
 package com.mediportal.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
 public class LoginRequest {
-    @NotBlank
+    // Accepts phone (+91...) or email — either works
+    private String identifier;
+
+    // Legacy field kept for backward compat
     private String phone;
 
-    @NotBlank
     private String otp;
-}
 
+    public String resolvedIdentifier() {
+        return (identifier != null && !identifier.isBlank()) ? identifier : phone;
+    }
+}

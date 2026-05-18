@@ -11,12 +11,14 @@ import com.mediportal.repository.AppointmentRepository;
 import com.mediportal.repository.DoctorRatingRepository;
 import com.mediportal.repository.DoctorRepository;
 import com.mediportal.repository.PatientRepository;
+import com.mediportal.service.EmailService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -39,6 +41,11 @@ public class AppointmentController {
     @Autowired
     private DoctorRatingRepository ratingRepository;
 
+    @Autowired
+    private EmailService emailService;
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     private Patient getCurrentPatient(Authentication auth) {
         return patientRepository.findByPhone(auth.getName()).orElseThrow();
     }
@@ -46,6 +53,15 @@ public class AppointmentController {
     private AppointmentResponse toResponse(Appointment a) {
         boolean rated = ratingRepository.existsByAppointmentId(a.getId());
         return AppointmentResponse.fromAppointment(a, rated);
+    }
+
+    /** Generates a unique Jitsi Meet link — no API key required, always works. */
+    private static final SecureRandom MEET_RANDOM = new SecureRandom();
+    private String generateMeetLink() {
+        // Room name: MediVault + 12 random lowercase letters → globally unique
+        StringBuilder sb = new StringBuilder("MediVault-");
+        for (int i = 0; i < 12; i++) sb.append((char) ('a' + MEET_RANDOM.nextInt(26)));
+        return "https://meet.jit.si/" + sb;
     }
 
     @GetMapping
@@ -90,7 +106,7 @@ public class AppointmentController {
         Patient patient = getCurrentPatient(auth);
         Doctor doctor = doctorRepository.findById(request.getDoctorId()).orElseThrow();
 
-        boolean slotTaken = appointmentRepository.existsByDoctorIdAndAppointmentDateAndAppointmentTime(
+        boolean slotTaken = appointmentRepository.isSlotTaken(
                 doctor.getId(), request.getAppointmentDate(), request.getAppointmentTime());
 
         if (slotTaken) {
@@ -107,7 +123,16 @@ public class AppointmentController {
         appointment.setNotes(request.getNotes());
         appointment.setStatus(Appointment.AppointmentStatus.SCHEDULED);
 
+        // Generate a unique Google Meet link for Video Call appointments
+        if ("Video Call".equalsIgnoreCase(appointment.getAppointmentType())) {
+            appointment.setMeetLink(generateMeetLink());
+        }
+
         Appointment saved = appointmentRepository.save(appointment);
+
+        // Send confirmation email (non-blocking — failure doesn't affect response)
+        emailService.sendBookingConfirmation(patient, doctor, saved);
+
         return ResponseEntity.ok(toResponse(saved));
     }
 
@@ -139,15 +164,22 @@ public class AppointmentController {
         LocalDate newDate = LocalDate.parse(body.get("appointmentDate"));
         LocalTime newTime = LocalTime.parse(body.get("appointmentTime"));
 
-        boolean slotTaken = appointmentRepository.existsByDoctorIdAndAppointmentDateAndAppointmentTime(
+        boolean slotTaken = appointmentRepository.isSlotTaken(
                 appointment.getDoctor().getId(), newDate, newTime);
         if (slotTaken) {
             return ResponseEntity.badRequest().body(new MessageResponse("This time slot is already booked."));
         }
 
+        // Capture old date/time before overwriting for the email
+        LocalDate oldDate = appointment.getAppointmentDate();
+        LocalTime oldTime = appointment.getAppointmentTime();
+
         appointment.setAppointmentDate(newDate);
         appointment.setAppointmentTime(newTime);
         appointmentRepository.save(appointment);
+
+        // Send reschedule notification email (non-blocking — failure doesn't affect response)
+        emailService.sendRescheduleConfirmation(patient, appointment.getDoctor(), appointment, oldDate, oldTime);
 
         return ResponseEntity.ok(toResponse(appointment));
     }
